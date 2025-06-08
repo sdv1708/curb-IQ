@@ -43,19 +43,76 @@ The goal of this project is to support the Seattle Department of Transportation 
 
 ---
 
-## 🧠 Model Development
+## Dataset
 
-### Dataset
-- **Source**: Seattle Open Data Portal
-- **Size**: ~1 million rows sampled
-- **Key Fields**: Occupancy datetime, parking rate, space count, block ID, location metadata
+### Source
+The dataset used for training and streaming is the **2020 Paid Parking Occupancy** dataset published by the Seattle Department of Transportation (SDOT). It is publicly available through the City of Seattle Open Data Portal:
+
+- **Link**: [Seattle Parking Occupancy Dataset](https://catalog.data.gov/dataset/2020-paid-parking-occupancy)
+
+---
+
+### Description
+This is a time-series geospatial dataset that captures detailed parking occupancy and pricing patterns across Seattle’s paid parking zones throughout the year 2020.
+
+- **Format**: CSV (and streaming as batch slices)
+- **Records**: ~1 million entries
+- **Frequency**: 15-minute intervals per block
+- **Granularity**: Blockface-level data (location + side of street)
+
+---
+
+### Key Fields
+
+| Column               | Description                                                  |
+|----------------------|--------------------------------------------------------------|
+| `OccupancyDateTime`  | Timestamp of the occupancy reading                           |
+| `PaidOccupancy`      | Number of paid parking spaces occupied                       |
+| `ParkingSpaceCount`  | Total number of spaces available                             |
+| `PaidParkingRate`    | Rate charged at the time                                     |
+| `BlockfaceName`      | Street and direction of the parking block                    |
+| `SideOfStreet`       | Which side of the street the blockface is located on         |
+| `PaidParkingArea`    | Zone/neighborhood where the parking spot is located          |
+| `ParkingTimeLimitCategory` | Time limit rules for that zone (e.g., 2h, 4h)         |
+| `ParkingCategory`    | Type of parking area (e.g., commercial, mixed use)           |
+
+---
 
 ### Feature Engineering
-- Time-based: `hour`, `dayofweek`, `month`, `is_weekend`, `is_peak_hour`
-- Derived: `occupancy_rate = PaidOccupancy / ParkingSpaceCount`
-- One-hot encoding of location-based categorical columns
-- Scaling of numerical features
 
+From the raw data, the following engineered features were derived:
+
+- **Temporal Variables**:
+  - `hour`, `dayofweek`, `month` from `OccupancyDateTime`
+  - `is_weekend`: binary flag for weekend hours
+  - `is_peak_hour`: flag for morning/evening rush hours
+
+- **Occupancy Rate**:
+  - `occupancy_rate = PaidOccupancy / ParkingSpaceCount`
+
+These transformations allow the model to capture hourly trends, weekly patterns, and dynamic demand.
+
+---
+
+### Streaming Configuration
+
+- A subset of the dataset (last 4 months of 2020) is used to simulate real-time streaming in the Streamlit dashboard.
+- Each row represents a unique location-time combination and is processed one-by-one to simulate live inference.
+- Data is streamed into the app, sent to the Replicate API for prediction, and logged to Google BigQuery for downstream analytics.
+
+---
+
+### Use Case Justification
+
+This dataset is ideally suited for developing and validating a dynamic pricing system because:
+
+- It provides high temporal and spatial resolution
+- Includes real occupancy and pricing behaviors across multiple urban zones
+- Allows for simulating real-world surge pricing scenarios based on congestion, peak hours, and location demand
+
+This foundation enables training a robust, interpretable base pricing model, and testing real-time surge pricing logic in a controlled, data-driven environment.
+
+## 🧠 Model Development
 ### Model
 - Algorithm: `LinearRegression` from scikit-learn
 - Evaluation: (R² ≈ moderate, RMSE ≈ 4, MAE ≈ 1.1)
